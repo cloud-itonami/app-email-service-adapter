@@ -1,0 +1,64 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:gmail.etzhayyim.com",
+  "component": {
+    "path": "component.wasm"
+  },
+  "convoSystemPrompt": "You are gmail-mcp-component agent. Gmail Integration — AI Agent for Google email sync, send, and analytics. Respond helpfully in the users language.",
+  "duties": [
+    "勤労の義務"
+  ],
+  "governance": {
+    "raci": "responsible",
+    "classification": "internal",
+    "complianceFrameworks": [
+      "email-service-adapter-policy"
+    ]
+  },
+  "kpi": [
+    "credits の獲得"
+  ],
+  "name": "gmail-mcp-component",
+  "nanoid": "gmail-mcp",
+  "performerType": "service",
+  "profile": {
+    "agentType": "autonomous",
+    "capabilities": [
+      "domain-query",
+      "data-management"
+    ],
+    "description": "Gmail Integration — AI Agent for Google email sync, send, and analytics",
+    "displayName": "Gmail Integration",
+    "isBot": true,
+    "operator": "etzhayyim.com"
+  },
+  "project": "gmail",
+  "runtimeType": "worker",
+  "space": {
+    "channels": [
+      {
+        "default": true,
+        "description": "Gmail sync notifications and email activity",
+        "kind": "public",
+        "name": "gmail-feed"
+      }
+    ],
+    "description": "Google Gmail email integration",
+    "historyVisibility": "world-readable",
+    "joinRule": "public",
+    "name": "Gmail"
+  },
+  "triggers": {
+    "subscribeRepos": {
+      "collections": [
+        "app.bsky.feed.post",
+        "app.bsky.feed.like",
+        "app.bsky.graph.follow",
+        "com.etzhayyim.apps.emailUserviceUadapter.email_service_adapter_entity",
+        "com.etzhayyim.apps.emailUserviceUadapter.email_service_adapter_event",
+        "com.etzhayyim.apps.emailUserviceUadapter.email_service_adapter_report"
+      ]
+    }
+  },
+  "uiType": "appview"
+}

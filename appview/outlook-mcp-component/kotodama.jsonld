@@ -1,0 +1,34 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:outlook.etzhayyim.com",
+  "name": "outlook-mcp-component",
+  "nanoid": "outlook",
+  "performerType": "service",
+  "runtimeType": "worker",
+  "project": "outlook",
+  "component": {
+    "path": "src/app.ts"
+  },
+  "build": {
+    "guestLanguage": "ts",
+    "role": "thin-edge"
+  },
+  "profile": {
+    "displayName": "Outlook",
+    "description": "Thin edge facade; Outlook OAuth and Graph sync run in AgentGateway MCP + pod-side LangServer",
+    "isBot": true,
+    "agentType": "autonomous",
+    "category": "email",
+    "operator": "etzhayyim.com",
+    "capabilities": ["bpmn-dispatch", "oauth-redirect", "mailbox-sync"]
+  },
+  "triggers": {
+    "subscribeRepos": {
+      "collections": [
+        "com.etzhayyim.apps.emailServiceAdapter.syncMailbox",
+        "com.etzhayyim.apps.emailServiceAdapter.syncJob"
+      ]
+    }
+  },
+  "uiType": "appview"
+}

@@ -1,0 +1,49 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://outlook.etzhayyim.com",
+  "name": "etzhayyim-project-email-service-adapter",
+  "description": "External email service adapter — OAuth integration for Outlook and Gmail with auth flow UI and email data display",
+  "url": "https://outlook.etzhayyim.com",
+  "applicationCategory": "Productivity",
+  "operatingSystem": "Kubernetes",
+  "author": {
+    "@type": "Organization",
+    "name": "etzhayyim",
+    "url": "https://etzhayyim.com"
+  },
+  "component": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "outlook-ui",
+      "description": "SvelteKit static UI for Outlook OAuth integration and email display",
+      "applicationCategory": "Frontend",
+      "programmingLanguage": "TypeScript",
+      "runtimePlatform": "SpinApp (CDN embed)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "gmail-ui",
+      "description": "SvelteKit static UI for Gmail OAuth integration and email display",
+      "applicationCategory": "Frontend",
+      "programmingLanguage": "TypeScript",
+      "runtimePlatform": "SpinApp (CDN embed)"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "outlook-mcp",
+      "description": "SpinApp MCP component for Microsoft Graph API email operations",
+      "applicationCategory": "Backend",
+      "programmingLanguage": "Go (TinyGo)",
+      "runtimePlatform": "SpinApp"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "gmail-mcp",
+      "description": "SpinApp MCP component for Gmail API email operations",
+      "applicationCategory": "Backend",
+      "programmingLanguage": "Go (TinyGo)",
+      "runtimePlatform": "SpinApp"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "kotodama-outlook",
+  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2025-03-17",
+  "compatibility_flags": ["nodejs_compat","nodejs_als"],
+  "assets": {
+    "directory": "./svelte/.svelte-kit/cloudflare/client",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "vars": {
+    "APP_CAPABILITIES": "[\"bpmn-dispatch\",\"oauth-redirect\",\"mailbox-sync\"]",
+    "APP_DESCRIPTION": "Thin edge facade; Outlook OAuth and Graph sync run in BPMN + Zeebe Python",
+    "APP_DISPLAY_NAME": "Outlook",
+    "APP_EMBED_URL": "https://outlook.etzhayyim.com/?embed=1",
+    "APP_FRAMEWORK": "sveltekit-edge-bff",
+    "AGENTGATEWAY_MCP_ROUTER_URL": "https://mcp.etzhayyim.com/xrpc/com.etzhayyim.mcp.message",
+    "APP_NANOID": "outlook",
+    "APP_PERFORMER_TYPE": "service",
+    "APP_UI_TYPE": "appview"
+  },
+  "routes": [
+    { "pattern": "outlook.etzhayyim.com/*", "zone_name": "etzhayyim.com" }
+  ]
+}
