@@ -1,1 +1,1 @@
-{:schema "etzhayyim.repository/v1" :name "com-etzhayyim-app-email-service-adapter" :kind :app :canonical-metadata :edn}
+{:schema "etzhayyim.repository/v1" :name "app-email-service-adapter" :kind :app :canonical-metadata :edn}
