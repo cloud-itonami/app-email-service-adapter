@@ -1,0 +1,328 @@
+#!/usr/bin/env nbb
+;; scripts/verify-surface-agreement.cljs
+;;
+;; Four files in this repository describe the HTTP surface of
+;; outlook.etzhayyim.com. No two of them agree. This script pins what each one
+;; actually says, so that the divergence is a measured fact with a date on it
+;; rather than something a reader has to rediscover by opening four files.
+;;
+;;   nbb --classpath ".:scripts" scripts/verify-surface-agreement.cljs
+;;   ... --live     also resolve the hostnames (needs DNS; see LIVE below)
+;;   ... --verbose  print every check, not just the failures
+;;
+;; ## Why this is green rather than red
+;;
+;; The divergence below is real and unfixed. A script that failed on it would be
+;; permanently red, and a gate that never goes green is exactly as uninformative
+;; as one that never goes red -- nobody can act on either. So this asserts the
+;; *current measured shape* instead: it is green today, and it turns red the
+;; moment any of the four descriptions changes. Whoever changes one is then
+;; told, by name, which of the other three they have just contradicted, and the
+;; quickstart that quotes these numbers is forced to move with them.
+;;
+;; That makes it a ratchet, not a verdict. It deliberately does NOT decide which
+;; surface should win -- that is the app owner's call and needs the pod-side
+;; LangServer that this repository does not contain.
+;;
+;; ## Exit codes
+;;
+;;   0  every pinned fact still holds
+;;   1  a pinned fact moved -- read the diff, then update this file AND the doc
+;;   2  COULD NOT ANSWER -- an input was missing, so no claim is made either way
+;;
+;; 2 is not 0. A missing input must never be reported as agreement; that is the
+;; failure mode this workspace has hit repeatedly (CLAUDE.md, "検査を書く前・
+;; 緑を信じる前の 5 問").
+
+(ns verify-surface-agreement
+  (:require ["fs" :as fs]
+            ["path" :as path]
+            ["child_process" :as cp]
+            [clojure.set :as set]
+            [clojure.string :as str]))
+
+(def args (vec (drop 2 (js->clj js/process.argv))))
+(def live?    (boolean (some #{"--live"} args)))
+(def verbose? (boolean (some #{"--verbose"} args)))
+
+;; Default to the working directory: this is meant to be run from the repository
+;; root. `--root` exists so the mutation harness can point it at a scratch copy.
+(def root
+  (path/resolve (or (second (drop-while #(not= "--root" %) args))
+                    (.cwd js/process))))
+
+(defn- at [& parts] (apply path/join root parts))
+(defn- exists? [p] (fs/existsSync p))
+(defn- slurp* [p] (str (fs/readFileSync p "utf8")))
+
+;; ---------------------------------------------------------------------------
+;; Inputs. Every one of these must be present; a run that cannot read them all
+;; answers 2, because "I did not look" and "I looked and all was well" must not
+;; produce the same exit code.
+;; ---------------------------------------------------------------------------
+
+(def inputs
+  {:wrangler   (at "appview" "outlook-mcp-component" "wrangler.jsonc")
+   :facade     (at "appview" "outlook-mcp-component" "src" "app.ts")
+   :ui         (at "appview" "outlook-mcp-component" "svelte" "src" "App.svelte")
+   :e2e        (at "appview" "outlook-mcp-component" "svelte" "e2e" "outlook.spec.ts")
+   :pkg        (at "appview" "outlook-mcp-component" "svelte" "package.json")
+   :kotodama-o (at "appview" "outlook-mcp-component" "kotodama.jsonld")
+   :kotodama-g (at "appview" "gmail-mcp-component" "kotodama.jsonld")
+   :gmail-bin  (at "appview" "gmail-mcp-component" "gmail-mcp-component")})
+
+(def missing (->> inputs (remove (fn [[_ p]] (exists? p))) (map first) vec))
+
+(when (seq missing)
+  (println "COULD NOT ANSWER — missing input(s):")
+  (doseq [k missing] (println "  " (name k) "->" (get inputs k)))
+  (println)
+  (println "No claim is made about surface agreement. This is exit 2, not a pass.")
+  (js/process.exit 2))
+
+(def src (into {} (for [[k p] inputs :when (not= k :gmail-bin)] [k (slurp* p)])))
+
+;; ---------------------------------------------------------------------------
+;; Extraction. Each of these reads one file and returns what that file SAYS,
+;; with no opinion about what it ought to say.
+;; ---------------------------------------------------------------------------
+
+(defn- re1
+  "First capture group of re in s, or nil."
+  [re s]
+  (when-let [m (re-find re s)] (second m)))
+
+(defn wrangler-main []   (re1 #"\"main\"\s*:\s*\"([^\"]+)\"" (:wrangler src)))
+(defn wrangler-routes [] (vec (map second (re-seq #"\"pattern\"\s*:\s*\"([^\"]+)\"" (:wrangler src)))))
+(defn facade-prefix []   (re1 #"NSID_PREFIX\s*=\s*\"([^\"]+)\"" (:facade src)))
+(defn ui-service-base [] (re1 #"SERVICE_BASE\s*=\s*\"([^\"]+)\"" (:ui src)))
+
+(defn ui-separator
+  "How App.svelte joins SERVICE_BASE to the method name."
+  []
+  (cond
+    (str/includes? (:ui src) "${SERVICE_BASE}.${") "."
+    (str/includes? (:ui src) "${SERVICE_BASE}/${") "/"
+    :else nil))
+
+(defn ui-methods []
+  (->> (re-seq #"callApi(?:<[^>]*>)?\(\"([A-Za-z.]+)\"" (:ui src))
+       (map second) set))
+
+(defn e2e-methods []
+  (->> (re-seq #"/xrpc/etzhayyim\.outlook\.v1\.OutlookService([./])([A-Za-z.]+)" (:e2e src))
+       (map (fn [[_ sep m]] [sep m])) set))
+
+(defn svelte-server-routes []
+  (let [dir (at "appview" "outlook-mcp-component" "svelte" "src")]
+    (letfn [(walk [d]
+              (mapcat (fn [e]
+                        (let [p (path/join d e)]
+                          (if (.isDirectory (fs/statSync p)) (walk p) [p])))
+                      (fs/readdirSync d)))]
+      (->> (walk dir)
+           (map #(path/basename %))
+           (filter #(re-find #"^(\+server\.|hooks\.server\.|\+page\.server\.|\+layout\.server\.)" %))
+           vec))))
+
+(defn gmail-component-path [] (re1 #"\"path\"\s*:\s*\"([^\"]+)\"" (:kotodama-g src)))
+(defn outlook-component-path [] (re1 #"\"path\"\s*:\s*\"([^\"]+)\"" (:kotodama-o src)))
+
+(defn gmail-collections []
+  (->> (re-seq #"\"(com\.etzhayyim\.apps\.[A-Za-z_.]+)\"" (:kotodama-g src))
+       (map second) vec))
+
+(defn gmail-bin-magic []
+  (let [fd (fs/openSync (:gmail-bin inputs) "r")
+        buf (js/Buffer.alloc 4)]
+    (fs/readSync fd buf 0 4 0)
+    (fs/closeSync fd)
+    (.toString buf "hex")))
+
+(defn gmail-bin-size [] (.-size (fs/statSync (:gmail-bin inputs))))
+
+(defn design-system-declared? []
+  (str/includes? (:pkg src) "@etzhayyim/design-system"))
+
+(defn design-system-imported?
+  "Does any source file actually import the dependency package.json pins?"
+  []
+  (let [dir (at "appview" "outlook-mcp-component" "svelte" "src")]
+    (letfn [(walk [d]
+              (mapcat (fn [e]
+                        (let [p (path/join d e)]
+                          (if (.isDirectory (fs/statSync p)) (walk p) [p])))
+                      (fs/readdirSync d)))]
+      (boolean (some #(str/includes? (slurp* %) "@etzhayyim/design-system") (walk dir))))))
+
+;; ---------------------------------------------------------------------------
+;; The pinned facts. Measured 2026-08-16 at 7fdd22f.
+;; ---------------------------------------------------------------------------
+
+(def checks
+  [{:id :deploy-target
+    :why "wrangler deploys the SvelteKit build output, not the facade"
+    :expect "svelte/.svelte-kit/cloudflare/_worker.js"
+    :actual (wrangler-main)}
+
+   {:id :deployed-worker-has-no-server-routes
+    :why "so the deployed worker answers no /xrpc and no /health at all"
+    :expect []
+    :actual (svelte-server-routes)}
+
+   {:id :facade-is-not-the-deploy-target
+    :why "src/app.ts is the file a reader opens; nothing runs it"
+    :expect true
+    :actual (not= (wrangler-main) "src/app.ts")}
+
+   {:id :outlook-manifest-points-at-the-facade
+    :why "kotodama.jsonld names src/app.ts as the component, wrangler does not"
+    :expect "src/app.ts"
+    :actual (outlook-component-path)}
+
+   {:id :facade-nsid-prefix
+    :why "the facade proxies only this prefix"
+    :expect "com.etzhayyim.apps.outlook."
+    :actual (facade-prefix)}
+
+   {:id :ui-service-base
+    :why "the browser calls a different namespace than the facade proxies"
+    :expect "/xrpc/etzhayyim.outlook.v1.OutlookService"
+    :actual (ui-service-base)}
+
+   {:id :ui-joins-method-with-dot
+    :why "App.svelte builds `${SERVICE_BASE}.${method}`"
+    :expect "."
+    :actual (ui-separator)}
+
+   {:id :ui-methods
+    :why "the six calls the browser actually makes"
+    :expect #{"GetAuthStatus" "GetConnection" "ExchangeCode" "StartAuth" "SyncMailbox" "Disconnect"}
+    :actual (ui-methods)}
+
+   {:id :e2e-joins-method-with-slash
+    :why "the e2e suite builds .../OutlookService/Method — a different separator than the UI"
+    :expect #{"/"}
+    :actual (set (map first (e2e-methods)))}
+
+   {:id :ui-urls-the-facade-would-serve
+    :why "even if the facade WERE deployed, it proxies a prefix the UI never calls"
+    :expect 0
+    :actual (count (filter #(str/starts-with? % (or (facade-prefix) " "))
+                           (map #(str (subs (or (ui-service-base) "") (count "/xrpc/"))
+                                      (ui-separator) %)
+                                (ui-methods))))}
+
+   {:id :ui-urls-the-e2e-suite-exercises
+    :why "UI and e2e share one method name (GetConnection) and zero URLs, because the separator differs"
+    :expect 0
+    :actual (let [ui  (set (map #(str (ui-separator) %) (ui-methods)))
+                  e2e (set (map (fn [[sep m]] (str sep m)) (e2e-methods)))]
+              (count (set/intersection ui e2e)))}
+
+   {:id :gmail-manifest-component-path
+    :why "the gmail manifest names a wasm component"
+    :expect "component.wasm"
+    :actual (gmail-component-path)}
+
+   {:id :gmail-manifest-component-is-absent
+    :why "...and that file does not exist in the repository"
+    :expect false
+    :actual (exists? (at "appview" "gmail-mcp-component" (or (gmail-component-path) "component.wasm")))}
+
+   {:id :gmail-binary-is-mach-o-not-wasm
+    :why "what IS committed is a 6.7 MB macOS arm64 executable; wasm magic is 0061736d"
+    :expect "cffaedfe"
+    :actual (gmail-bin-magic)}
+
+   {:id :gmail-binary-size
+    :why "committed to git, against the large-binary/DataLad rule"
+    :expect 6712786
+    :actual (gmail-bin-size)}
+
+   {:id :gmail-collections-are-mangled
+    :why "a codemod turned email-service-adapter into emailUserviceUadapter; these NSIDs match nothing"
+    :expect 3
+    :actual (count (filter #(str/includes? % "emailUserviceUadapter") (gmail-collections)))}
+
+   {:id :design-system-declared
+    :why "package.json pins @etzhayyim/design-system as workspace:*"
+    :expect true
+    :actual (design-system-declared?)}
+
+   {:id :design-system-never-imported
+    :why "...and no source file imports it, so the unresolvable pin buys nothing"
+    :expect false
+    :actual (design-system-imported?)}
+
+   {:id :workspace-protocol-with-no-workspace-root
+    :why "workspace:* needs a workspace root; this repo has neither pnpm-workspace.yaml nor a root package.json, so the build that would produce the deploy target cannot resolve its deps here"
+    :expect true
+    :actual (and (str/includes? (:pkg src) "workspace:*")
+                 (not (exists? (at "pnpm-workspace.yaml")))
+                 (not (exists? (at "package.json"))))}])
+
+;; ---------------------------------------------------------------------------
+;; LIVE: hostname resolution. Off by default so the gate stays deterministic.
+;; When it IS asked for, it must answer -- a resolver failure is 2, not a pass.
+;; ---------------------------------------------------------------------------
+
+(defn resolves? [h]
+  (try
+    (let [out (str (cp/execSync (str "host " h " 2>&1 || true") #js {:encoding "utf8"}))]
+      (cond
+        (str/includes? out "NXDOMAIN") {:status :nxdomain}
+        (str/includes? out "has address") {:status :resolves}
+        :else {:status :unknown :raw (str/trim out)}))
+    (catch :default e {:status :unknown :raw (str e)})))
+
+(def live-checks
+  (when live?
+    (for [h ["outlook.etzhayyim.com" "gmail.etzhayyim.com"]]
+      {:id (keyword (str "dns-" (first (str/split h #"\."))))
+       :why "the wrangler route and the did:web both name this host"
+       :expect :nxdomain
+       :actual (:status (resolves? h))})))
+
+;; ---------------------------------------------------------------------------
+;; Report
+;; ---------------------------------------------------------------------------
+
+(defn- norm [v] (cond (set? v) (vec (sort v)) (seq? v) (vec v) :else v))
+(defn- same? [a b] (= (norm a) (norm b)))
+
+(def all (vec (concat checks live-checks)))
+(def failures (vec (remove #(same? (:expect %) (:actual %)) all)))
+
+(when (some #(= :unknown (:actual %)) live-checks)
+  (println "COULD NOT ANSWER — --live was requested but a hostname could not be resolved")
+  (println "  (no network, or a resolver that answers neither NXDOMAIN nor an address)")
+  (js/process.exit 2))
+
+(println (str "SCANNED\t" (count inputs) " input files, " (count all) " pinned facts"
+              (when live? " (+DNS)")))
+(println (str "root\t" root))
+(println)
+
+(doseq [c all]
+  (let [ok (same? (:expect c) (:actual c))]
+    (when (or verbose? (not ok))
+      (println (str (if ok "  ok  " "  FAIL") "  " (name (:id c))))
+      (println (str "        " (:why c)))
+      (when-not ok
+        (println (str "        expected: " (pr-str (norm (:expect c)))))
+        (println (str "        actual:   " (pr-str (norm (:actual c)))))))))
+
+(println)
+(if (seq failures)
+  (do
+    (println (str "FAIL\t" (count failures) " of " (count all) " pinned facts moved."))
+    (println)
+    (println "One of the four descriptions of this surface changed. Decide which one is")
+    (println "now authoritative, update docs/operator-quickstart.md to match, then update")
+    (println "the :expect above. Do not update :expect alone -- the doc quotes these.")
+    (js/process.exit 1))
+  (do
+    (println (str "OK\t" (count all) " pinned facts hold. The four descriptions still disagree"))
+    (println "\tin exactly the documented ways; see docs/operator-quickstart.md §3.")
+    (js/process.exit 0)))
