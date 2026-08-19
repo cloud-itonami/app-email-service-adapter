@@ -208,7 +208,7 @@
    {:id :ui-urls-the-facade-would-serve
     :why "even if the facade WERE deployed, it proxies a prefix the UI never calls"
     :expect 0
-    :actual (count (filter #(str/starts-with? % (or (facade-prefix) " "))
+    :actual (count (filter #(str/starts-with? % (or (facade-prefix) "\u0000"))
                            (map #(str (subs (or (ui-service-base) "") (count "/xrpc/"))
                                       (ui-separator) %)
                                 (ui-methods))))}
