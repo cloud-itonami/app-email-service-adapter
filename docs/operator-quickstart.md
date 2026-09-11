@@ -31,9 +31,9 @@ file and `README.md` are prose about it, not a second source of truth.
 One command, no network, no install, ~5 s:
 
 ```bash
-nbb scripts/verify-surface-agreement.cljs            # 19 facts
-nbb scripts/verify-surface-agreement.cljs --verbose  # print all of them
-nbb scripts/verify-surface-agreement.cljs --live     # 21 — also resolves the hostnames
+kbb --backend sci scripts/verify-surface-agreement.cljk            # 19 facts
+kbb --backend sci scripts/verify-surface-agreement.cljk --verbose  # print all of them
+kbb --backend sci scripts/verify-surface-agreement.cljk --live     # 21 — also resolves the hostnames
 ```
 
 Exit `0` every pinned fact holds · `1` one moved · `2` **could not answer**, an
@@ -43,7 +43,7 @@ inputs must not be reportable as agreement.
 To check the checker itself:
 
 ```bash
-nbb scripts/mutate-surface-agreement.cljs            # 13 mutations, ~5 s
+kbb --backend sci scripts/mutate-surface-agreement.cljk            # 13 mutations, ~5 s
 ```
 
 It breaks each pinned fact in a scratch copy and requires the verifier to exit 1

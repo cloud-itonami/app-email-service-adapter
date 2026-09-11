@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 ;; scripts/verify-surface-agreement.cljs
 ;;
 ;; Four files in this repository describe the HTTP surface of
@@ -6,7 +6,7 @@
 ;; actually says, so that the divergence is a measured fact with a date on it
 ;; rather than something a reader has to rediscover by opening four files.
 ;;
-;;   nbb --classpath ".:scripts" scripts/verify-surface-agreement.cljs
+;;   kbb --backend sci --classpath ".:scripts" scripts/verify-surface-agreement.cljs
 ;;   ... --live     also resolve the hostnames (needs DNS; see LIVE below)
 ;;   ... --verbose  print every check, not just the failures
 ;;

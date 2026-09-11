@@ -30,7 +30,7 @@ rediscovering them.
 ## Start here
 
 ```bash
-nbb scripts/verify-surface-agreement.cljs --verbose   # ~5 s, no network
+kbb --backend sci scripts/verify-surface-agreement.cljk --verbose   # ~5 s, no network
 ```
 
 19 pinned facts (21 with `--live`, which also resolves the hostnames). Exit `0`
@@ -40,7 +40,7 @@ Then read **[`docs/operator-quickstart.md`](docs/operator-quickstart.md)**,
 which explains each fact, what you can and cannot run, and what to do when the
 verifier goes red.
 
-To check the checker: `nbb scripts/mutate-surface-agreement.cljs` (13
+To check the checker: `kbb --backend sci scripts/mutate-surface-agreement.cljk` (13
 mutations, ~5 s) breaks each fact in a scratch copy and requires the verifier
 to name the specific check that pins it.
 
