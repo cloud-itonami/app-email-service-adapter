@@ -1,11 +1,11 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 ;; scripts/mutate-surface-agreement.cljs
 ;;
 ;; Proves that verify-surface-agreement.cljs discriminates. For each pinned fact
 ;; it copies the tree to a scratch directory, breaks exactly that one thing, and
 ;; requires that the verifier (a) exits 1 and (b) names the check that was broken.
 ;;
-;;   nbb scripts/mutate-surface-agreement.cljs
+;;   kbb --backend sci scripts/mutate-surface-agreement.cljk
 ;;
 ;; (b) is the point. A mutation that turns the tree red for some *other* reason
 ;; -- a reader that now throws, a file that no longer parses, a renamed symbol
