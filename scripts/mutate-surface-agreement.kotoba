@@ -11,7 +11,7 @@
 ;; -- a reader that now throws, a file that no longer parses, a renamed symbol
 ;; that happens to contain the string being searched for -- looks exactly like a
 ;; successful demonstration from the exit code alone. This workspace has made
-;; that mistake four times in one day (CLAUDE.md, "壊したものと報告されたものが
+;; that mistake four times in one day (AGENTS.md, "壊したものと報告されたものが
 ;; 一致することを確かめる"). So each case declares the check ids it must turn
 ;; red, and a case that goes red for anything else is itself a failure here.
 ;;

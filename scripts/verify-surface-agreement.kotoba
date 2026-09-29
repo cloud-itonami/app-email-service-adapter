@@ -31,7 +31,7 @@
 ;;   2  COULD NOT ANSWER -- an input was missing, so no claim is made either way
 ;;
 ;; 2 is not 0. A missing input must never be reported as agreement; that is the
-;; failure mode this workspace has hit repeatedly (CLAUDE.md, "検査を書く前・
+;; failure mode this workspace has hit repeatedly (AGENTS.md, "検査を書く前・
 ;; 緑を信じる前の 5 問").
 
 (ns verify-surface-agreement

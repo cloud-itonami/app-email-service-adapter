@@ -176,16 +176,16 @@ from the monorepo this was extracted from, so treat them as pointers into
 `etzhayyim/root`, not local paths:
 
 - `NOTICE` and `MIGRATION-TODO.md` cite `CHARTER-RIDER.md` — absent here.
-- `CLAUDE.md` cites `20-actors/…`, `30-graph/…`, `00-contracts/lexicons/…`,
+- `AGENTS.md` cites `20-actors/…`, `30-graph/…`, `00-contracts/lexicons/…`,
   `10-protocol/wproto/src/signal.ts`, `deps.toml` — all absent here.
-- `CLAUDE.md` says the lexicons are "`emailServiceAdapter/` (2 files)". There is
+- `AGENTS.md` says the lexicons are "`emailServiceAdapter/` (2 files)". There is
   no lexicon directory in this repository.
 - `MIGRATION-TODO.md`'s codemod evidence cites
   `appview/outlook-mcp-component/static-ui/_app/immutable/chunks/By41dYui.js`.
   There is no `static-ui/` here, so that scan cannot be reproduced from this
   checkout.
 
-Two open deviations are recorded in `CLAUDE.md` and are **not** resolved:
+Two open deviations are recorded in `AGENTS.md` and are **not** resolved:
 `signal:v1:{base64}` is an encoding, not encryption; and `subjectEnc` /
 `bodyPreviewEnc` / `nameEnc` are embedded in AT Records against ADR-0014.
 
