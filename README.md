@@ -52,7 +52,7 @@ to name the specific check that pins it.
 | `appview/gmail-mcp-component/` | `kotodama.jsonld` + committed binary; no source |
 | `docs/operator-quickstart.md` | what runs, what does not, and the evidence |
 | `scripts/` | the verifier and its mutation harness |
-| `CLAUDE.md` | actor/PII design notes, incl. two unresolved deviations |
+| `AGENTS.md` | actor/PII design notes, incl. two unresolved deviations |
 | `MIGRATION-TODO.md` | substrate-boundary checklist inherited from the seed |
 
 Licensed Apache-2.0 with the etzhayyim Charter Compliance Rider v3.1; see
